@@ -35,10 +35,9 @@ also getint and getfloat
         Method used with Cron to synchronise Tryton Badges with Isonas
         """
 
-        tryton_badges = set(cls.search([ ])) # get all badges from Tryton
+        tryton_badges = cls.search([ ]) # get all badges from Tryton
         tryton_badge_numbers = set(b.number for b in tryton_badges) # set of all badge numbers
-
-        
+        tryton_idfiles = set(b.code for b in tryton_badges)
 
 
         Isonas_connection = Isonasacs(config.get('Isonas', 'host'), \

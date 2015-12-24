@@ -3,16 +3,14 @@
 # this repository contains the full copyright notices and license terms.
 import re
 import os
-import time
-import sys
-import unittest
 import ConfigParser
-from setuptools import setup, Command
+from setuptools import setup
 
 MODULE = "party_access_control_isonas"
 PREFIX = "trytonacs"
 
 MODULE2PREFIX = {}
+
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -47,7 +45,8 @@ requires.append(
 setup(
     name='%s_%s' % (PREFIX, MODULE),
     version=info.get('version', '0.0.1'),
-    description="Tryton integration with ISONAS Access Controller software Crystal Matrix",
+    description="Tryton integration with ISONAS Access Controller software \
+    Crystal Matrix",
     author="Lava Lab Software Pty Ltd",
     author_email='mail@lavalab.com.au',
     url='http://www.lavalab.com.au/',

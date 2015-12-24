@@ -1,5 +1,18 @@
 <?xml version="1.0"?>
 <tryton>
     <data>
+    	<record model="ir.cron" id="cron_update_isonas_controller">
+            <field name="name">Update Isonas Controller</field>
+            <field name="request_user" ref="res.user_admin"/>
+            <field name="user" ref="res.user_trigger"/>
+            <field name="active" eval="True"/>
+            <field name="interval_number">2</field>
+            <field name="interval_type">minutes</field>
+            <field name="number_calls">-1</field>
+            <field name="repeat_missed" eval="False"/>
+            <field name="model">access.control.badge</field>
+            <field name="function">isonas_badge_sync</field>
+        </record>
     </data>
 </tryton>
+

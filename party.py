@@ -47,18 +47,13 @@ class Badge:
             config.get('Isonas', 'host'), config.get('Isonas', 'port'))
         isonas.logon(
             config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
-        isonas_idfile_groupname = config.get('Isonas', 'groupname')
+        groupname = config.get('Isonas', 'groupname')
 
-        # get all 'IDFILES' of the tryton_user group
-        isonas_tryton_group_idfiles = isonas.query('GROUP',
-            isonas_idfile_groupname)
-        # get all 'IDFILES' for updating
-        isonas_idfiles_codes = set()
-        isonas_idfiles_dict = {}
-        for idfile_code in isonas_tryton_group_idfiles:
-            isonas_idfiles_codes.add(idfile_code[1])
-            isonas_idfiles_dict[idfile_code[1]] = isonas.query(
-                'IDFILE', idfile_code[1])
+        # get all 'IDFILES' of the groupname
+        isonas_idfiles = {}
+        for group, idstring in isonas.query('GROUP', groupname):
+            # XXX IDFILES are not used for update
+            isonas_idfiles[idstring] = isonas.query('IDFILE', idstring)
 
         # get all the badges from ISONAS controller
         isonas_badges = isonas.query_all('BADGES')
@@ -66,6 +61,7 @@ class Badge:
 
         tryton_codes = set(tryton_badges.keys())
         tryton_idfiles_codes = set(tryton_idfiles.keys())
+        isonas_idfiles_codes = set(isonas_idfiles.keys())
 
         idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
         idfiles_to_create = tryton_idfiles_codes - isonas_idfiles_codes
@@ -83,8 +79,7 @@ class Badge:
             isonas.add('IDFILE',
                 tryton_idfiles[idfile_code].name.encode('ascii'),
                 '', '', idfile_code.encode('ascii'))
-            isonas.add('GROUPS', idfile_code.encode('ascii'),
-                isonas_idfile_groupname.encode('ascii'))
+            isonas.add('GROUPS', idfile_code.encode('ascii'), groupname)
 
         for badge in badges_to_create:
             if tryton_badges[badge].disabled:

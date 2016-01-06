@@ -11,9 +11,25 @@ from trytond.pool import PoolMeta, Pool
 from trytond.config import config
 from isonasacs import Isonasacs
 
-__all__ = ['Badge']
+__all__ = ['Party', 'Badge']
 
 __metaclass__ = PoolMeta
+
+
+class Party:
+    __name__ = 'party.party'
+
+    @classmethod
+    def create(cls, vlist):
+        parties = super(Party, cls).create(vlist)
+        cls.isonas_badge_sync([], parties)
+        return parties
+
+    @classmethod
+    def write(cls, *args):
+        super(Party, cls).write(*args)
+        parties = sum(args[0:None:2], [])
+        cls.isonas_badge_sync([], parties)
 
 
 class Badge:
@@ -21,7 +37,7 @@ class Badge:
     __name__ = 'access.control.badge'
 
     @classmethod
-    def isonas_badge_sync(cls):
+    def isonas_badge_sync(cls, badges=None, parties=None):
         """
         Method used with Cron to synchronise Tryton Badges with Isonas
 
@@ -36,12 +52,20 @@ class Badge:
         - set of tryton - set of isonas = badges to create in isonas
         - what about badges to disable....
         """
-        # get all badges from Tryton
-        tryton_badges = {b.code: b for b in cls.search([])}
+        pool = Pool()
+        Party = pool.get('party.party')
 
-        Party = Pool().get('party.party')
-        tryton_idfiles = {p.code: p
-            for p in Party.search([('badges', '!=', None)])}
+        # get all badges from Tryton
+        if badges is not None:
+            tryton_badges = {b.code: b for b in badges}
+        else:
+            tryton_badges = {b.code: b for b in cls.search([])}
+
+        if parties is not None:
+            tryton_idfiles = {p.code: p for p in parties}
+        else:
+            tryton_idfiles = {p.code: p
+                for p in Party.search([('badges', '!=', None)])}
 
         isonas = Isonasacs(
             config.get('Isonas', 'host'), config.get('Isonas', 'port'))
@@ -62,7 +86,11 @@ class Badge:
         isonas_idfiles_codes = set(isonas_idfiles.keys())
         isonas_badges_codes = set(isonas_badges.keys())
 
-        idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
+        if badges is None and parties is None:
+            idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
+        else:
+            # Partial synchronisation so nothing to delete
+            idfiles_to_delete = []
         idfiles_to_create = tryton_idfiles_codes - isonas_idfiles_codes
         idfiles_to_update = tryton_idfiles_codes - idfiles_to_create
         badges_to_create = tryton_badges_codes - isonas_badges_codes
@@ -101,3 +129,15 @@ class Badge:
                 isonas.update('BADGES', code, 0, '')
             else:
                 isonas.update('BADGES', code, 0, '')
+
+    @classmethod
+    def create(cls, vlist):
+        badges = super(Badge, cls).create(vlist)
+        cls.isonas_badge_sync(badges, [])
+        return badges
+
+    @classmethod
+    def write(cls, *args):
+        super(Badge, cls).write(*args)
+        badges = sum(args[0:None:2], [])
+        cls.isonas_badge_sync(badges, [])

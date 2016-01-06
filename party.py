@@ -58,16 +58,16 @@ class Badge:
         # get all the badges from ISONAS controller
         isonas_badges = {b[0]: b for b in isonas.query_all('BADGES')}
 
-        tryton_codes = set(tryton_badges.keys())
         tryton_idfiles_codes = set(tryton_idfiles.keys())
+        tryton_badges_codes = set(tryton_badges.keys())
         isonas_idfiles_codes = set(isonas_idfiles.keys())
         isonas_badges_codes = set(isonas_badges.keys())
 
         idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
         idfiles_to_create = tryton_idfiles_codes - isonas_idfiles_codes
         idfiles_to_update = tryton_idfiles_codes - idfiles_to_create
-        badges_to_create = tryton_codes - isonas_badges_codes
-        badges_to_update = tryton_codes - badges_to_create
+        badges_to_create = tryton_badges_codes - isonas_badges_codes
+        badges_to_update = tryton_badges_codes - badges_to_create
 
         # XXX Can I delete idfiles that have badges?
         # yes - it will delete the badges too

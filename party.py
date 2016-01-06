@@ -37,13 +37,7 @@ class Badge:
         - what about badges to disable....
         """
         # get all badges from Tryton
-        tryton_badges = cls.search([])
-        tryton_badges_dict = {}
-        for badge in tryton_badges:
-            tryton_badges_dict[badge.code] = badge
-
-        # set of all badge numbers
-        tryton_badges_codes = set(b.code for b in tryton_badges)
+        tryton_badges = {b.code: b for b in cls.search([])}
 
         Party = Pool().get('party.party')
         tryton_idfiles = Party.search([('badges', '!=', None)])
@@ -80,10 +74,12 @@ class Badge:
         for idfile_idstring in idfiles_to_delete:
             Isonas_connection.delete('IDFILE', idfile_idstring)
 
+        tryton_codes = set(tryton_badges.keys())
+
         idfiles_to_create = tryton_idfiles_codes - isonas_idfiles_codes
         idfiles_to_update = tryton_idfiles_codes - idfiles_to_create
-        badges_to_create = tryton_badges_codes - isonas_badges_codes
-        badges_to_update = tryton_badges_codes - badges_to_create
+        badges_to_create = tryton_codes - isonas_badges_codes
+        badges_to_update = tryton_codes - badges_to_create
 
         # CREATE
         for idfile_code in idfiles_to_create:
@@ -94,13 +90,13 @@ class Badge:
                 isonas_idfile_groupname.encode('ascii'))
 
         for badge in badges_to_create:
-            if tryton_badges_dict[badge].disabled:
+            if tryton_badges[badge].disabled:
                 Isonas_connection.add('BADGES',
-                    tryton_badges_dict[badge].party.code.encode('ascii'),
+                    tryton_badges[badge].party.code.encode('ascii'),
                     badge.encode('ascii'), 0, 0, '', '', 2)
             else:
                 Isonas_connection.add('BADGES',
-                    tryton_badges_dict[badge].party.code.encode('ascii'),
+                    tryton_badges[badge].party.code.encode('ascii'),
                     badge.encode('ascii'), 0, 0, 0, '', 2)
 
         # UPDATE idfiles'
@@ -113,7 +109,7 @@ class Badge:
                     '', '', idfile_code.encode('ascii'))
 
         for badge in badges_to_update:
-            if tryton_badges_dict[badge].disabled:
+            if tryton_badges[badge].disabled:
                 Isonas_connection.update('BADGES', badge.encode('ascii'), 0, '')
             else:
                 Isonas_connection.update('BADGES', badge.encode('ascii'), 0, '')

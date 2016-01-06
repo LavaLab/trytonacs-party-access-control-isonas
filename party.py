@@ -43,25 +43,25 @@ class Badge:
         tryton_idfiles = {p.code: p
             for p in Party.search([('badges', '!=', None)])}
 
-        Isonas_connection = Isonasacs(config.get('Isonas', 'host'),
-            config.get('Isonas', 'port'))
-        Isonas_connection.logon(config.get('Isonas', 'clientid'),
-            config.get('Isonas', 'password'))
+        isonas = Isonasacs(
+            config.get('Isonas', 'host'), config.get('Isonas', 'port'))
+        isonas.logon(
+            config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
         isonas_idfile_groupname = config.get('Isonas', 'groupname')
 
         # get all 'IDFILES' of the tryton_user group
-        isonas_tryton_group_idfiles = Isonas_connection.query('GROUP',
+        isonas_tryton_group_idfiles = isonas.query('GROUP',
             isonas_idfile_groupname)
         # get all 'IDFILES' for updating
         isonas_idfiles_codes = set()
         isonas_idfiles_dict = {}
         for idfile_code in isonas_tryton_group_idfiles:
             isonas_idfiles_codes.add(idfile_code[1])
-            isonas_idfiles_dict[idfile_code[1]] = Isonas_connection.query(
+            isonas_idfiles_dict[idfile_code[1]] = isonas.query(
                 'IDFILE', idfile_code[1])
 
         # get all the badges from ISONAS controller
-        isonas_badges = Isonas_connection.query_all('BADGES')
+        isonas_badges = isonas.query_all('BADGES')
         isonas_badges_codes = set(badge[0] for badge in isonas_badges)
 
         tryton_codes = set(tryton_badges.keys())
@@ -76,37 +76,37 @@ class Badge:
         # XXX Can I delete idfiles that have badges?
         # yes - it will delete the badges too
         for idfile_idstring in idfiles_to_delete:
-            Isonas_connection.delete('IDFILE', idfile_idstring)
+            isonas.delete('IDFILE', idfile_idstring)
 
         # CREATE
         for idfile_code in idfiles_to_create:
-            Isonas_connection.add('IDFILE',
+            isonas.add('IDFILE',
                 tryton_idfiles[idfile_code].name.encode('ascii'),
                 '', '', idfile_code.encode('ascii'))
-            Isonas_connection.add('GROUPS', idfile_code.encode('ascii'),
+            isonas.add('GROUPS', idfile_code.encode('ascii'),
                 isonas_idfile_groupname.encode('ascii'))
 
         for badge in badges_to_create:
             if tryton_badges[badge].disabled:
-                Isonas_connection.add('BADGES',
+                isonas.add('BADGES',
                     tryton_badges[badge].party.code.encode('ascii'),
                     badge.encode('ascii'), 0, 0, '', '', 2)
             else:
-                Isonas_connection.add('BADGES',
+                isonas.add('BADGES',
                     tryton_badges[badge].party.code.encode('ascii'),
                     badge.encode('ascii'), 0, 0, 0, '', 2)
 
         # UPDATE idfiles'
         for idfile_code in idfiles_to_update:
-            isonasidfile = Isonas_connection.query(
+            isonasidfile = isonas.query(
                 'IDFILE', idfile_code.encode('ascii'))
             if isonasidfile[0] != tryton_idfiles[idfile_code].name:
-                Isonas_connection.update('IDFILE',
+                isonas.update('IDFILE',
                     tryton_idfiles[idfile_code].name.encode('ascii'),
                     '', '', idfile_code.encode('ascii'))
 
         for badge in badges_to_update:
             if tryton_badges[badge].disabled:
-                Isonas_connection.update('BADGES', badge.encode('ascii'), 0, '')
+                isonas.update('BADGES', badge.encode('ascii'), 0, '')
             else:
-                Isonas_connection.update('BADGES', badge.encode('ascii'), 0, '')
+                isonas.update('BADGES', badge.encode('ascii'), 0, '')

@@ -52,7 +52,6 @@ class Badge:
         # get all 'IDFILES' of the groupname
         isonas_idfiles = {}
         for group, idstring in isonas.query('GROUP', groupname):
-            # XXX IDFILES are not used for update
             isonas_idfiles[idstring] = isonas.query('IDFILE', idstring)
 
         # get all the badges from ISONAS controller
@@ -71,37 +70,34 @@ class Badge:
 
         # XXX Can I delete idfiles that have badges?
         # yes - it will delete the badges too
-        for idfile_idstring in idfiles_to_delete:
-            isonas.delete('IDFILE', idfile_idstring)
+        for idstring in idfiles_to_delete:
+            isonas.delete('IDFILE', idstring)
 
         # CREATE
-        for idfile_code in idfiles_to_create:
-            isonas.add('IDFILE',
-                tryton_idfiles[idfile_code].name.encode('ascii'),
-                '', '', idfile_code.encode('ascii'))
-            isonas.add('GROUPS', idfile_code.encode('ascii'), groupname)
+        for code in idfiles_to_create:
+            party = tryton_idfiles[code]
+            name = party.name.encode('ascii', 'replace')
+            isonas.add('IDFILE', name, '', '', code)
+            isonas.add('GROUPS', code, groupname)
 
-        for badge in badges_to_create:
-            if tryton_badges[badge].disabled:
-                isonas.add('BADGES',
-                    tryton_badges[badge].party.code.encode('ascii'),
-                    badge.encode('ascii'), 0, 0, '', '', 2)
+        for code in badges_to_create:
+            badge = tryton_badges[code]
+            if badge.disabled:
+                isonas.add('BADGES', badge.party.code, code, 0, 0, '', '', 2)
             else:
-                isonas.add('BADGES',
-                    tryton_badges[badge].party.code.encode('ascii'),
-                    badge.encode('ascii'), 0, 0, 0, '', 2)
+                isonas.add('BADGES', badge.party.code, code, 0, 0, 0, '', 2)
 
         # UPDATE idfiles'
-        for idfile_code in idfiles_to_update:
-            isonasidfile = isonas.query(
-                'IDFILE', idfile_code.encode('ascii'))
-            if isonasidfile[0] != tryton_idfiles[idfile_code].name:
-                isonas.update('IDFILE',
-                    tryton_idfiles[idfile_code].name.encode('ascii'),
-                    '', '', idfile_code.encode('ascii'))
+        for code in idfiles_to_update:
+            idfile = isonas_idfiles[code]
+            party = tryton_idfiles[code]
+            party_name = party.name.encode('ascii', 'replace')
+            if idfile[0] != party_name:
+                isonas.update('IDFILE', party_name, '', '', code)
 
-        for badge in badges_to_update:
-            if tryton_badges[badge].disabled:
-                isonas.update('BADGES', badge.encode('ascii'), 0, '')
+        for code in badges_to_update:
+            badge = tryton_badges[code]
+            if badge.disabled:
+                isonas.update('BADGES', code, 0, '')
             else:
-                isonas.update('BADGES', badge.encode('ascii'), 0, '')
+                isonas.update('BADGES', code, 0, '')

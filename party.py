@@ -56,12 +56,12 @@ class Badge:
             isonas_idfiles[idstring] = isonas.query('IDFILE', idstring)
 
         # get all the badges from ISONAS controller
-        isonas_badges = isonas.query_all('BADGES')
-        isonas_badges_codes = set(badge[0] for badge in isonas_badges)
+        isonas_badges = {b[0]: b for b in isonas.query_all('BADGES')}
 
         tryton_codes = set(tryton_badges.keys())
         tryton_idfiles_codes = set(tryton_idfiles.keys())
         isonas_idfiles_codes = set(isonas_idfiles.keys())
+        isonas_badges_codes = set(isonas_badges.keys())
 
         idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
         idfiles_to_create = tryton_idfiles_codes - isonas_idfiles_codes

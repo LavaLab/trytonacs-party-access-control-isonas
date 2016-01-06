@@ -40,12 +40,8 @@ class Badge:
         tryton_badges = {b.code: b for b in cls.search([])}
 
         Party = Pool().get('party.party')
-        tryton_idfiles = Party.search([('badges', '!=', None)])
-        tryton_idfiles_dict = {}
-        # Create a dictionary of parties
-        for idfile in tryton_idfiles:
-            tryton_idfiles_dict[idfile.code] = idfile
-        tryton_idfiles_codes = set(p.code for p in tryton_idfiles)
+        tryton_idfiles = {p.code: p
+            for p in Party.search([('badges', '!=', None)])}
 
         Isonas_connection = Isonasacs(config.get('Isonas', 'host'),
             config.get('Isonas', 'port'))
@@ -68,23 +64,24 @@ class Badge:
         isonas_badges = Isonas_connection.query_all('BADGES')
         isonas_badges_codes = set(badge[0] for badge in isonas_badges)
 
-        idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
-        # XXX Can I delete idfiles that have badges?
-        # yes - it will delete the badges too
-        for idfile_idstring in idfiles_to_delete:
-            Isonas_connection.delete('IDFILE', idfile_idstring)
-
         tryton_codes = set(tryton_badges.keys())
+        tryton_idfiles_codes = set(tryton_idfiles.keys())
 
+        idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
         idfiles_to_create = tryton_idfiles_codes - isonas_idfiles_codes
         idfiles_to_update = tryton_idfiles_codes - idfiles_to_create
         badges_to_create = tryton_codes - isonas_badges_codes
         badges_to_update = tryton_codes - badges_to_create
 
+        # XXX Can I delete idfiles that have badges?
+        # yes - it will delete the badges too
+        for idfile_idstring in idfiles_to_delete:
+            Isonas_connection.delete('IDFILE', idfile_idstring)
+
         # CREATE
         for idfile_code in idfiles_to_create:
             Isonas_connection.add('IDFILE',
-                tryton_idfiles_dict[idfile_code].name.encode('ascii'),
+                tryton_idfiles[idfile_code].name.encode('ascii'),
                 '', '', idfile_code.encode('ascii'))
             Isonas_connection.add('GROUPS', idfile_code.encode('ascii'),
                 isonas_idfile_groupname.encode('ascii'))
@@ -103,9 +100,9 @@ class Badge:
         for idfile_code in idfiles_to_update:
             isonasidfile = Isonas_connection.query(
                 'IDFILE', idfile_code.encode('ascii'))
-            if isonasidfile[0] != tryton_idfiles_dict[idfile_code].name:
+            if isonasidfile[0] != tryton_idfiles[idfile_code].name:
                 Isonas_connection.update('IDFILE',
-                    tryton_idfiles_dict[idfile_code].name.encode('ascii'),
+                    tryton_idfiles[idfile_code].name.encode('ascii'),
                     '', '', idfile_code.encode('ascii'))
 
         for badge in badges_to_update:

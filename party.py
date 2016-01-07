@@ -22,6 +22,30 @@ class Badge:
     "Isonas Badges/Pins"
     __name__ = 'access.control.badge'
 
+    recent_events = fields.Function(
+        fields.text('Recent Events'),
+        getter="get_recent_isonas_events",
+    )
+
+    def get_recent_isonas_events(self):
+        """
+        Method used by function field to return a list of 
+        recent events for a particular party.
+        """
+        print 'connect to ISONAS'
+        Isonas_connection = Isonasacs(config.get('Isonas', 'host'), \
+             config.get('Isonas', 'port'))
+        Isonas_connection.logon(config.get('Isonas', 'clientid'), \
+            config.get('Isonas', 'password'))
+        startdate = 
+        starttime = 
+        enddate = 
+        endtime = 
+
+        Isonas_connection.query('HISTORY',startdate,starttime,enddate,endtime,'FILTERIDFILE',self.party.code)
+
+
+
     @classmethod
     def isonas_badge_sync(cls):
         """

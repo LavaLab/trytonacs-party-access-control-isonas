@@ -13,6 +13,7 @@ from .configuration import Configuration
 
 def register():
     Pool.register(
+        Party,
         Badge,
         Configuration,
         module='party_access_control_isonas', type_='model'

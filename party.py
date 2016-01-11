@@ -22,21 +22,46 @@ class Party:
 
     @classmethod
     def create(cls, vlist):
-        pool = Pool()
-        Badge = pool.get('access.control.badge')
-
+        print 'Inside Party Create'
         parties = super(Party, cls).create(vlist)
-        Badge.isonas_badge_sync([], parties)
+
+        #pool = Pool()
+        #Badge = pool.get('access.control.badge')
+        #Badge.isonas_badge_sync([], parties)
+
+        isonas = Isonasacs(
+            config.get('Isonas', 'host'), config.get('Isonas', 'port'))
+        isonas.logon(
+            config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
+        groupname = config.get('Isonas', 'groupname')
+
+        for party in parties:
+            name = party.name.encode('ascii', 'replace')
+            isonas.add('IDFILE', name, '', '', party.code.encode('ascii'))
+            isonas.add('GROUPS', party.code.encode('ascii'), groupname.encode('ascii'))
         return parties
 
     @classmethod
     def write(cls, *args):
-        pool = Pool()
-        Badge = pool.get('access.control.badge')
-
         super(Party, cls).write(*args)
         parties = sum(args[0:None:2], [])
-        Badge.isonas_badge_sync([], parties)
+
+        print 'Inside Party write'
+        start_time = time()
+        #pool = Pool()
+        #Badge = pool.get('access.control.badge')
+        #Badge.isonas_badge_sync([], parties)
+        isonas = Isonasacs(
+            config.get('Isonas', 'host'), config.get('Isonas', 'port'))
+        isonas.logon(
+            config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
+
+        for party in parties:
+            idfile = isonas.query('IDFILE', party.code.encode('ascii'))
+            party_name = party.name.encode('ascii', 'replace')
+            if idfile[0] != party_name:
+                isonas.update('IDFILE', party_name, '', '', party.code.encode('ascii'))
+        print '### finished party.write - %s seconds' % (time() - start_time)
 
 class Badge:
     "Isonas Badges/Pins"
@@ -139,22 +164,38 @@ class Badge:
     @classmethod
     def create(cls, vlist):
         badges = super(Badge, cls).create(vlist)
+        
         #cls.isonas_badge_sync(badges, [])
         
+        start_time = time()
         isonas = Isonasacs(
             config.get('Isonas', 'host'), config.get('Isonas', 'port'))
         isonas.logon(
             config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
-        groupname = config.get('Isonas', 'groupname')
 
+        print '### connected to ISONAS - %s seconds' % (time() - start_time)
         for badge in badges:
+            print "looping badges"
             if badge.disabled:
                 isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('asci'), 0, 0, '', '', 2)
             else:
                 isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('ascii'), 0, 0, 0, '', 2)
+        print '### created badges - %s seconds' % (time() - start_time)
+
+        return badges
 
     @classmethod
     def write(cls, *args):
         super(Badge, cls).write(*args)
         badges = sum(args[0:None:2], [])
         cls.isonas_badge_sync(badges, [])
+
+        isonas = Isonasacs(
+            config.get('Isonas', 'host'), config.get('Isonas', 'port'))
+        isonas.logon(
+            config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
+        for badge in badges:
+            if badge.disabled:
+                isonas.update('BADGES', badge.code.encode('ascii'), 0, 0, '', '')
+            else:
+                isonas.update('BADGES', badge.code.encode('ascii'), 0, 0, 0, '')

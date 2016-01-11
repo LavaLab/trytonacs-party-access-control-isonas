@@ -22,16 +22,21 @@ class Party:
 
     @classmethod
     def create(cls, vlist):
+        pool = Pool()
+        Badge = pool.get('access.control.badge')
+
         parties = super(Party, cls).create(vlist)
-        cls.isonas_badge_sync([], parties)
+        Badge.isonas_badge_sync([], parties)
         return parties
 
     @classmethod
     def write(cls, *args):
+        pool = Pool()
+        Badge = pool.get('access.control.badge')
+
         super(Party, cls).write(*args)
         parties = sum(args[0:None:2], [])
-        cls.isonas_badge_sync([], parties)
-
+        Badge.isonas_badge_sync([], parties)
 
 class Badge:
     "Isonas Badges/Pins"
@@ -134,8 +139,19 @@ class Badge:
     @classmethod
     def create(cls, vlist):
         badges = super(Badge, cls).create(vlist)
-        cls.isonas_badge_sync(badges, [])
-        return badges
+        #cls.isonas_badge_sync(badges, [])
+        
+        isonas = Isonasacs(
+            config.get('Isonas', 'host'), config.get('Isonas', 'port'))
+        isonas.logon(
+            config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
+        groupname = config.get('Isonas', 'groupname')
+
+        for badge in badges:
+            if badge.disabled:
+                isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('asci'), 0, 0, '', '', 2)
+            else:
+                isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('ascii'), 0, 0, 0, '', 2)
 
     @classmethod
     def write(cls, *args):

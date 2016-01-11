@@ -8,13 +8,11 @@
 """
 from trytond.pool import Pool
 
-from .party import Badge
-from .configuration import Configuration
+from .party import Badge, Party
 
 def register():
     Pool.register(
         Party,
         Badge,
-        Configuration,
         module='party_access_control_isonas', type_='model'
     )

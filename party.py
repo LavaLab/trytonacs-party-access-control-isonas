@@ -127,9 +127,9 @@ class Badge:
         for code in badges_to_update:
             badge = tryton_badges[code]
             if badge.disabled:
-                isonas.update('BADGES', code.encode('ascii'), 0, '')
+                isonas.update('BADGES', code.encode('ascii'), 0, 0, '', '')
             else:
-                isonas.update('BADGES', code.encode('ascii'), 0, '')
+                isonas.update('BADGES', code.encode('ascii'), 0, 0, 0, '')
 
     @classmethod
     def create(cls, vlist):

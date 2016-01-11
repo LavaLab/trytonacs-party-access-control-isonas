@@ -10,6 +10,7 @@
 from trytond.pool import PoolMeta, Pool
 from trytond.config import config
 from isonasacs import Isonasacs
+from time import time
 
 __all__ = ['Party', 'Badge']
 
@@ -129,15 +130,15 @@ class Badge:
         for code in idfiles_to_create:
             party = tryton_idfiles[code]
             name = party.name.encode('ascii', 'replace')
-            isonas.add('IDFILE', name, '', '', code)
-            isonas.add('GROUPS', code, groupname)
+            isonas.add('IDFILE', name, '', '', code.encode('ascii'))
+            isonas.add('GROUPS', code.encode('ascii'), groupname.encode('ascii'))
 
         for code in badges_to_create:
             badge = tryton_badges[code]
             if badge.disabled:
-                isonas.add('BADGES', badge.party.code, code, 0, 0, '', '', 2)
+                isonas.add('BADGES', badge.party.code.encode('ascii'), code.encode('ascii'), 0, 0, '', '', 2)
             else:
-                isonas.add('BADGES', badge.party.code, code, 0, 0, 0, '', 2)
+                isonas.add('BADGES', badge.party.code.encode('ascii'), code.encode('ascii'), 0, 0, 0, '', 2)
 
         # UPDATE idfiles'
         for code in idfiles_to_update:
@@ -145,14 +146,14 @@ class Badge:
             party = tryton_idfiles[code]
             party_name = party.name.encode('ascii', 'replace')
             if idfile[0] != party_name:
-                isonas.update('IDFILE', party_name, '', '', code)
+                isonas.update('IDFILE', party_name, '', '', code.encode('ascii'))
 
         for code in badges_to_update:
             badge = tryton_badges[code]
             if badge.disabled:
-                isonas.update('BADGES', code, 0, '')
+                isonas.update('BADGES', code.encode('ascii'), 0, '')
             else:
-                isonas.update('BADGES', code, 0, '')
+                isonas.update('BADGES', code.encode('ascii'), 0, '')
 
     @classmethod
     def create(cls, vlist):

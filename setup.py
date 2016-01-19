@@ -9,7 +9,9 @@ from setuptools import setup
 MODULE = "party_access_control_isonas"
 PREFIX = "trytonacs"
 
-MODULE2PREFIX = {}
+MODULE2PREFIX = {
+    'party_access_control': 'trytonacs'
+}
 
 
 def read(fname):

@@ -22,7 +22,6 @@ class Party:
 
     @classmethod
     def create(cls, vlist):
-        print 'Inside Party Create'
         parties = super(Party, cls).create(vlist)
 
         #pool = Pool()
@@ -46,8 +45,6 @@ class Party:
         super(Party, cls).write(*args)
         parties = sum(args[0:None:2], [])
 
-        print 'Inside Party write'
-        start_time = time()
         #pool = Pool()
         #Badge = pool.get('access.control.badge')
         #Badge.isonas_badge_sync([], parties)
@@ -61,7 +58,7 @@ class Party:
             party_name = party.name.encode('ascii', 'replace')
             if idfile[0] != party_name:
                 isonas.update('IDFILE', party_name, '', '', party.code.encode('ascii'))
-        print '### finished party.write - %s seconds' % (time() - start_time)
+
 
 class Badge:
     "Isonas Badges/Pins"
@@ -167,20 +164,16 @@ class Badge:
         
         #cls.isonas_badge_sync(badges, [])
         
-        start_time = time()
         isonas = Isonasacs(
             config.get('Isonas', 'host'), config.get('Isonas', 'port'))
         isonas.logon(
             config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
 
-        print '### connected to ISONAS - %s seconds' % (time() - start_time)
         for badge in badges:
-            print "looping badges"
             if badge.disabled:
                 isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('asci'), 0, 0, '', '', 2)
             else:
                 isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('ascii'), 0, 0, 0, '', 2)
-        print '### created badges - %s seconds' % (time() - start_time)
 
         return badges
 

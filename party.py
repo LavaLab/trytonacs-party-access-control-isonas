@@ -34,10 +34,19 @@ class Party:
             config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
         groupname = config.get('Isonas', 'groupname')
 
+        # need to check if parties have badges
+        # partiestocreatebadges
+
         for party in parties:
-            name = party.name.encode('ascii', 'replace')
-            isonas.add('IDFILE', name, '', '', party.code.encode('ascii'))
-            isonas.add('GROUPS', party.code.encode('ascii'), groupname.encode('ascii'))
+            if party.badges:
+                name = party.name.encode('ascii', 'replace')[:20]
+                try:
+                    isonas.add('IDFILE', name, '', '', party.code.encode('ascii'))
+                    isonas.add('GROUPS', party.code.encode('ascii'), groupname.encode('ascii'))
+                except IsonasacsError:
+                    print 'Party Create IsonasacsError exception'
+                    pass
+
         return parties
 
     @classmethod
@@ -54,10 +63,15 @@ class Party:
             config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
 
         for party in parties:
-            idfile = isonas.query('IDFILE', party.code.encode('ascii'))
-            party_name = party.name.encode('ascii', 'replace')
-            if idfile[0] != party_name:
-                isonas.update('IDFILE', party_name, '', '', party.code.encode('ascii'))
+            if party.badges:
+                try:
+                    idfile = isonas.query('IDFILE', party.code.encode('ascii'))
+                except IsonasacsError:
+                    pass
+                else:
+                    party_name = party.name.encode('ascii', 'replace')
+                    if idfile[0] != party_name:
+                        isonas.update('IDFILE', party_name, '', '', party.code.encode('ascii'))
 
 
 class Badge:
@@ -83,17 +97,19 @@ class Badge:
         pool = Pool()
         Party = pool.get('party.party')
 
-        # get all badges from Tryton
-        if badges is not None:
-            tryton_badges = {b.code: b for b in badges}
-        else:
-            tryton_badges = {b.code: b for b in cls.search([])}
+        start_time = time()
 
-        if parties is not None:
-            tryton_idfiles = {p.code: p for p in parties}
+        # get all badges from Tryton
+        if badges is None and parties is None:
+            tryton_badges = {b.code: b for b in cls.search([])}
         else:
+            tryton_badges = {b.code: b for b in badges}
+
+        if badges is None and parties is None:
             tryton_idfiles = {p.code: p
                 for p in Party.search([('badges', '!=', None)])}
+        else:
+            tryton_idfiles = {p.code: p for p in parties}
 
         isonas = Isonasacs(
             config.get('Isonas', 'host'), config.get('Isonas', 'port'))
@@ -101,40 +117,57 @@ class Badge:
             config.get('Isonas', 'clientid'), config.get('Isonas', 'password'))
         groupname = config.get('Isonas', 'groupname')
 
+        print '--- BEFORE IDFILE QUERY %s seconds ---' % (time() - start_time)
+
         # get all 'IDFILES' of the groupname
-        isonas_idfiles = {}
-        for group, idstring in isonas.query('GROUP', groupname):
-            isonas_idfiles[idstring] = isonas.query('IDFILE', idstring)
+        isonas_group_idfiles_codes = set(idfile[1] for idfile in isonas.query('GROUP', groupname))
+
+        print '--- AFTER GROUP QUERY %s seconds ---' % (time() - start_time)
+
+        # get all 'IDFILES' from ISONAS
+        isonas_all_idfiles_codes = set(idfile[0] for idfile in isonas.query_all('IDFILE'))
+
+        print '--- AFTER IDFILE QUERY %s seconds ---' % (time() - start_time)
 
         # get all the badges from ISONAS controller
         isonas_badges = {b[0]: b for b in isonas.query_all('BADGES')}
 
+        print '--- AFTER BADGES QUERY %s seconds ---' % (time() - start_time)
+
         tryton_idfiles_codes = set(tryton_idfiles.keys())
         tryton_badges_codes = set(tryton_badges.keys())
-        isonas_idfiles_codes = set(isonas_idfiles.keys())
         isonas_badges_codes = set(isonas_badges.keys())
 
-        if badges is None and parties is None:
-            idfiles_to_delete = isonas_idfiles_codes - tryton_idfiles_codes
-        else:
+        # uncomment following section to allow deletion
+        # if badges is None and parties is None:
+            # idfiles_to_delete = isonas_all_idfiles_codes - tryton_idfiles_codes
+        # else:
             # Partial synchronisation so nothing to delete
-            idfiles_to_delete = []
-        idfiles_to_create = tryton_idfiles_codes - isonas_idfiles_codes
-        idfiles_to_update = tryton_idfiles_codes - idfiles_to_create
-        badges_to_create = tryton_badges_codes - isonas_badges_codes
-        badges_to_update = tryton_badges_codes - badges_to_create
+            #idfiles_to_delete = []
 
+        idfiles_to_create = tryton_idfiles_codes - isonas_all_idfiles_codes
+        idfiles_to_update = tryton_idfiles_codes.intersection(isonas_all_idfiles_codes)
+        idfiles_to_add_to_group = tryton_idfiles_codes - isonas_group_idfiles_codes
+        # idfiles_to_add_to_group = idfiles_to_add_to_group - idfiles_to_create
+        badges_to_create = tryton_badges_codes - isonas_badges_codes
+        badges_to_update = tryton_badges_codes.intersection(isonas_badges_codes)
+
+        ### DELETE
+        # uncomment following section to allow deletion
         # XXX Can I delete idfiles that have badges?
         # yes - it will delete the badges too
-        for idstring in idfiles_to_delete:
-            isonas.delete('IDFILE', idstring)
+        # for idstring in idfiles_to_delete:
+            # print '** delete idfile %s' % idstring
+            # isonas.delete('IDFILE', idstring)
 
-        # CREATE
+        ### CREATE
         for code in idfiles_to_create:
             party = tryton_idfiles[code]
             name = party.name.encode('ascii', 'replace')
             isonas.add('IDFILE', name, '', '', code.encode('ascii'))
-            isonas.add('GROUPS', code.encode('ascii'), groupname.encode('ascii'))
+            # isonas.add('GROUPS', code.encode('ascii'), groupname.encode('ascii'))
+
+        print '--- FINISHED creating idfiles %s seconds ---' % (time() - start_time)
 
         for code in badges_to_create:
             badge = tryton_badges[code]
@@ -143,11 +176,24 @@ class Badge:
             else:
                 isonas.add('BADGES', badge.party.code.encode('ascii'), code.encode('ascii'), 0, 0, 0, '', 2)
 
-        # UPDATE idfiles'
+        print '--- FINISHED creating badges %s seconds ---' % (time() - start_time)
+
+        #### UPDATE GROUP
+        for code in idfiles_to_add_to_group:
+            isonas.add('GROUPS', code.encode('ascii'), groupname.encode('ascii'))
+
+        print '--- FINISHED updating groups %s seconds ---' % (time() - start_time)
+
+        ### UPDATE idfiles'
+        # get the details of all the IDFILES'
+        isonas_idfiles_details = {}
+        for idstring in idfiles_to_update:
+            isonas_idfiles_details[idstring] = isonas.query('IDFILE', idstring.encode('ascii'))
+
         for code in idfiles_to_update:
-            idfile = isonas_idfiles[code]
+            idfile = isonas_idfiles_details[code]
             party = tryton_idfiles[code]
-            party_name = party.name.encode('ascii', 'replace')
+            party_name = party.name.encode('ascii', 'replace')[:20]
             if idfile[0] != party_name:
                 isonas.update('IDFILE', party_name, '', '', code.encode('ascii'))
 

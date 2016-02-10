@@ -217,7 +217,7 @@ class Badge:
 
         for badge in badges:
             if badge.disabled:
-                isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('asci'), 0, 0, '', '', 2)
+                isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('ascii'), 0, 0, '', '', 2)
             else:
                 isonas.add('BADGES', badge.party.code.encode('ascii'), badge.code.encode('ascii'), 0, 0, 0, '', 2)
 
